@@ -1,0 +1,6 @@
+{
+  "name": "AI Chat Assistant",
+  "description": "A polished AI chatbot web application with multi-chat management and local persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
