@@ -1,3 +1,5 @@
+import { generateCryptoId } from './random';
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -19,8 +21,8 @@ const STORAGE_KEY = 'ai_chat_sessions_v1';
 const ACTIVE_SESSION_KEY = 'ai_chat_active_session_id_v1';
 const THEME_KEY = 'ai_chat_theme_mode_v1';
 
-export function generateId(): string {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+export function generateId(prefix = 'chat'): string {
+  return generateCryptoId(prefix);
 }
 
 export function createNewSession(initialTitle = '新对话'): ChatSession {

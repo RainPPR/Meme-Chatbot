@@ -14,6 +14,7 @@ import {
   saveThemePreference,
 } from '@/lib/chat-store';
 import { getRandomMemeResponse, getRandomThinkingDelay } from '@/lib/responses';
+import { getRandomInt } from '@/lib/random';
 import { Sidebar } from '@/components/Sidebar';
 import { ChatHeader } from '@/components/ChatHeader';
 import { ChatMessageItem } from '@/components/ChatMessageItem';
@@ -49,21 +50,24 @@ export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      return loadThemePreference();
+    }
+    return 'light';
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync initial theme on client mount
+  // Sync theme with document element
   useEffect(() => {
-    if (!isMounted) return;
-    const initialTheme = loadThemePreference();
-    if (initialTheme === 'dark') {
+    if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [isMounted]);
+  }, [theme]);
 
   // Save sessions to localStorage whenever they change after mount
   useEffect(() => {
@@ -250,7 +254,7 @@ export default function ChatPage() {
         const remaining = fullText.length - charIndex;
         const randomChunkSize = Math.min(
           remaining,
-          Math.floor(Math.random() * 6) + 5
+          getRandomInt(5, 10)
         );
 
         charIndex += randomChunkSize;
@@ -278,7 +282,7 @@ export default function ChatPage() {
         );
 
         // Fast streaming delay: 10ms to 20ms per chunk (high throughput token streaming)
-        const delay = Math.floor(Math.random() * 11) + 10;
+        const delay = getRandomInt(10, 20);
 
         timerRef.current = setTimeout(typeNextChunk, delay);
       };

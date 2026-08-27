@@ -1,3 +1,5 @@
+import { AntiClusteringPicker, getRandomInt } from './random';
+
 /**
  * 梗式 AI 响应池及动态生成规则
  * 用户可在此数组中轻松追加新的响应字符串或动态生成函数。
@@ -43,15 +45,17 @@ export const MEME_RESPONSES: ResponseGenerator[] = [
   '我只是一个语言模型，无法处理和理解这个问题。'
 ];
 
+// 初始化单例抗聚集采样器
+const memePicker = new AntiClusteringPicker<ResponseGenerator>(MEME_RESPONSES, 0.5);
+
 /**
- * 随机选取并生成一条回复
+ * 高质量抗聚集随机选取并生成一条回复
  */
 export function getRandomMemeResponse(): string {
   if (MEME_RESPONSES.length === 0) {
     return '...';
   }
-  const index = Math.floor(Math.random() * MEME_RESPONSES.length);
-  const selected = MEME_RESPONSES[index];
+  const selected = memePicker.pick();
   const now = new Date();
 
   if (typeof selected === 'function') {
@@ -62,7 +66,9 @@ export function getRandomMemeResponse(): string {
 
 /**
  * 获取随机思考时间 (0.5 ~ 1.5 秒，即 500 ~ 1500 毫秒)
+ * 使用加密级均匀分布生成，避免标准 Math.random() 的区间聚集
  */
 export function getRandomThinkingDelay(): number {
-  return Math.floor(Math.random() * 1000) + 500;
+  return getRandomInt(500, 1500);
 }
+
