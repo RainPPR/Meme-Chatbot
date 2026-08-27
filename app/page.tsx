@@ -246,11 +246,11 @@ export default function ChatPage() {
           return;
         }
 
-        // Randomize chunk length: 2 to 3 characters (or remaining)
+        // Randomize chunk length: 5 to 10 characters (or remaining)
         const remaining = fullText.length - charIndex;
         const randomChunkSize = Math.min(
           remaining,
-          Math.floor(Math.random() * 2) + 2
+          Math.floor(Math.random() * 6) + 5
         );
 
         charIndex += randomChunkSize;
@@ -277,8 +277,8 @@ export default function ChatPage() {
           })
         );
 
-        // Fast streaming delay: 20ms to 30ms per chunk (no artificial punctuation pause)
-        const delay = Math.floor(Math.random() * 11) + 20;
+        // Fast streaming delay: 10ms to 20ms per chunk (high throughput token streaming)
+        const delay = Math.floor(Math.random() * 11) + 10;
 
         timerRef.current = setTimeout(typeNextChunk, delay);
       };

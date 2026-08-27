@@ -11,13 +11,14 @@ This repository is a lightweight, high-craftsmanship Next.js application designe
 - **Lockfile & CI Ready**: Preserves `package-lock.json` so GitHub Actions caching and `npm ci` work out-of-the-box.
 - **Client-Side Persistence**: Stores all chat sessions, messages, and theme preferences entirely within the browser (`localStorage`).
 - **Dynamic Meme Engine**: Randomly selects responses from a generator pool in `lib/responses.ts` and simulates a realistic 500ms–1500ms thinking phase followed by high-frequency typewriter streaming.
-- **Fast Token Typing Stream**: Emits 2–3 character chunks at rapid 20ms–30ms interval delays without human punctuation pauses, matching genuine neural network token throughput with interactive stop generation controls.
+- **Fast Token Typing Stream**: Emits 5–10 character chunks at rapid 10ms–20ms interval delays without human punctuation pauses, matching genuine neural network token throughput with interactive stop generation controls.
 - **Date Calculation**: Computes the first Friday that is `>= 8 days` in the future relative to the user's local time for compliance meme messages.
 - **Pure Client Logic**: Zero external AI dependencies (no `@google/genai` or cloud endpoints).
 
 ## 2. Build and Test Commands
 
 - **Development Server**: `npm run dev` (Runs on port 3000)
+- **Dependency & Lockfile Sync**: `npm install` (Syncs `package.json` and updates `package-lock.json` for CI/CD)
 - **Production Build (Container/Standalone)**: `npm run build`
 - **Static Export (GitHub Pages)**: `OUTPUT_EXPORT=true npm run build` (Outputs pure static HTML to `./out`)
 - **Linting**: `npm run lint`

@@ -7,7 +7,8 @@ The project is architected for zero-configuration deployment to GitHub Pages usi
 ## Workflow Triggers & Execution Steps
 
 - **Trigger Conditions**: Pushes to `main` or `master` branches, as well as manual workflow dispatch.
-- **Environment Configuration**: Ubuntu runner running Node.js 20 LTS.
+- **Environment Configuration**: Ubuntu runner running Node.js with automated npm caching.
+- **Dependency Installation & Lockfile Synchronization**: Uses `npm ci` ensuring deterministic dependency resolution matching `package-lock.json`.
 - **Export Mode**: Executed with static export flags enabled, generating purely static HTML, CSS, and client-side JavaScript assets into the `out/` distribution folder.
 - **Pages Artifact**: Uploaded to GitHub Pages runner and deployed under the repository's GitHub Pages domain.
 

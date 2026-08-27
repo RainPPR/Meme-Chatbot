@@ -11,7 +11,7 @@ The chatbot engine operates deterministically as a humorous imitation tool. Rega
 3. **Response Selection**: A response is selected uniformly at random from the generator pool.
 4. **Streaming Typewriter Phase**:
    - The assistant transitions from thinking to typing (`isThinking: false`, `isTyping: true`).
-   - The message content is emitted smoothly in chunks of 2 to 3 characters at a fast cadence of 20ms to 30ms per interval.
+   - The message content is emitted smoothly in chunks of 5 to 10 characters at a fast cadence of 10ms to 20ms per interval.
    - Punctuation pauses have been eliminated to authentically reflect real LLM token streaming speed rather than human typing habits.
    - A blinking cursor indicator is visually attached to the active stream tail.
 5. **Resolution & Interactive Cancellation**:
