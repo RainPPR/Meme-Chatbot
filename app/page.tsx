@@ -48,11 +48,11 @@ export default function ChatPage() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [isThinking, setIsThinking] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const thinkingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync initial theme on client mount
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function ChatPage() {
     if (activeSession?.messages.length) {
       scrollToBottom(true);
     }
-  }, [activeSession?.messages.length, isThinking, scrollToBottom]);
+  }, [activeSession?.messages.length, isGenerating, scrollToBottom]);
 
   // Toggle Theme
   const handleToggleTheme = () => {
@@ -112,10 +112,36 @@ export default function ChatPage() {
     }
   };
 
+  // Stop current in-flight generation (thinking or typing)
+  const handleStopGenerating = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsGenerating(false);
+    setSessions((prev) =>
+      prev.map((s) => {
+        if (s.id === effectiveActiveSessionId) {
+          return {
+            ...s,
+            messages: s.messages
+              .filter((m) => !(m.isThinking && !m.content)) // remove empty thinking message if stopped early
+              .map((m) => ({
+                ...m,
+                isThinking: false,
+                isTyping: false,
+              })),
+          };
+        }
+        return s;
+      })
+    );
+  }, [effectiveActiveSessionId]);
+
   // Create New Chat
   const handleNewChat = () => {
-    if (isThinking) {
-      handleStopThinking();
+    if (isGenerating) {
+      handleStopGenerating();
     }
     const newSession = createNewSession('新对话');
     setSessions((prev) => [newSession, ...prev]);
@@ -125,8 +151,8 @@ export default function ChatPage() {
 
   // Switch Active Session
   const handleSelectSession = (id: string) => {
-    if (isThinking) {
-      handleStopThinking();
+    if (isGenerating) {
+      handleStopGenerating();
     }
     setActiveSessionId(id);
     setInput('');
@@ -141,8 +167,8 @@ export default function ChatPage() {
 
   // Delete Session
   const handleDeleteSession = (id: string) => {
-    if (isThinking && id === effectiveActiveSessionId) {
-      handleStopThinking();
+    if (isGenerating && id === effectiveActiveSessionId) {
+      handleStopGenerating();
     }
     setSessions((prev) => {
       const filtered = prev.filter((s) => s.id !== id);
@@ -160,8 +186,8 @@ export default function ChatPage() {
 
   // Clear all sessions
   const handleClearAllSessions = () => {
-    if (isThinking) {
-      handleStopThinking();
+    if (isGenerating) {
+      handleStopGenerating();
     }
     const fresh = createNewSession('新对话');
     setSessions([fresh]);
@@ -170,8 +196,8 @@ export default function ChatPage() {
 
   // Clear current session messages
   const handleClearCurrentChat = () => {
-    if (isThinking) {
-      handleStopThinking();
+    if (isGenerating) {
+      handleStopGenerating();
     }
     if (!effectiveActiveSessionId) return;
     setSessions((prev) =>
@@ -183,29 +209,88 @@ export default function ChatPage() {
     );
   };
 
-  // Stop thinking / generating
-  const handleStopThinking = () => {
-    if (thinkingTimeoutRef.current) {
-      clearTimeout(thinkingTimeoutRef.current);
-      thinkingTimeoutRef.current = null;
-    }
-    setIsThinking(false);
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id === effectiveActiveSessionId) {
-          return {
-            ...s,
-            messages: s.messages.filter((m) => !m.isThinking),
-          };
+  /**
+   * Typewriter streaming simulation with realistic randomness
+   */
+  const startTypingEffect = useCallback(
+    (targetSessionId: string, messageId: string, fullText: string) => {
+      let charIndex = 0;
+
+      const typeNextChunk = () => {
+        if (charIndex >= fullText.length) {
+          // Finished typing
+          setSessions((prev) =>
+            prev.map((s) => {
+              if (s.id === targetSessionId) {
+                return {
+                  ...s,
+                  updatedAt: Date.now(),
+                  messages: s.messages.map((m) =>
+                    m.id === messageId
+                      ? {
+                          ...m,
+                          content: fullText,
+                          isThinking: false,
+                          isTyping: false,
+                          timestamp: Date.now(),
+                        }
+                      : m
+                  ),
+                };
+              }
+              return s;
+            })
+          );
+          setIsGenerating(false);
+          timerRef.current = null;
+          return;
         }
-        return s;
-      })
-    );
-  };
+
+        // Randomize chunk length: 2 to 3 characters (or remaining)
+        const remaining = fullText.length - charIndex;
+        const randomChunkSize = Math.min(
+          remaining,
+          Math.floor(Math.random() * 2) + 2
+        );
+
+        charIndex += randomChunkSize;
+        const currentSlice = fullText.slice(0, charIndex);
+
+        setSessions((prev) =>
+          prev.map((s) => {
+            if (s.id === targetSessionId) {
+              return {
+                ...s,
+                messages: s.messages.map((m) =>
+                  m.id === messageId
+                    ? {
+                        ...m,
+                        content: currentSlice,
+                        isThinking: false,
+                        isTyping: true,
+                      }
+                    : m
+                ),
+              };
+            }
+            return s;
+          })
+        );
+
+        // Fast streaming delay: 20ms to 30ms per chunk (no artificial punctuation pause)
+        const delay = Math.floor(Math.random() * 11) + 20;
+
+        timerRef.current = setTimeout(typeNextChunk, delay);
+      };
+
+      typeNextChunk();
+    },
+    []
+  );
 
   // Send message handler
   const handleSendMessage = (textToSend: string) => {
-    if (isThinking || !effectiveActiveSessionId) return;
+    if (isGenerating || !effectiveActiveSessionId) return;
 
     const userMessage: ChatMessage = {
       id: generateId(),
@@ -220,6 +305,7 @@ export default function ChatPage() {
       content: '',
       timestamp: Date.now(),
       isThinking: true,
+      isTyping: false,
     };
 
     setSessions((prev) =>
@@ -242,40 +328,24 @@ export default function ChatPage() {
       })
     );
 
-    setIsThinking(true);
+    setIsGenerating(true);
 
-    const delayMs = getRandomThinkingDelay();
-    thinkingTimeoutRef.current = setTimeout(() => {
+    // Thinking phase (0.5s ~ 1.5s)
+    const thinkingDelayMs = getRandomThinkingDelay();
+    timerRef.current = setTimeout(() => {
       const responseContent = getRandomMemeResponse();
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === effectiveActiveSessionId) {
-            return {
-              ...s,
-              updatedAt: Date.now(),
-              messages: s.messages.map((m) =>
-                m.id === thinkingAssistantMessage.id
-                  ? {
-                      ...m,
-                      content: responseContent,
-                      isThinking: false,
-                      timestamp: Date.now(),
-                    }
-                  : m
-              ),
-            };
-          }
-          return s;
-        })
+      // Transition from thinking to typing
+      startTypingEffect(
+        effectiveActiveSessionId,
+        thinkingAssistantMessage.id,
+        responseContent
       );
-      setIsThinking(false);
-      thinkingTimeoutRef.current = null;
-    }, delayMs);
+    }, thinkingDelayMs);
   };
 
   // Regenerate last assistant response
   const handleRegenerateLast = () => {
-    if (isThinking || !activeSession || activeSession.messages.length === 0)
+    if (isGenerating || !activeSession || activeSession.messages.length === 0)
       return;
 
     const lastMsgIndex = activeSession.messages.length - 1;
@@ -289,6 +359,7 @@ export default function ChatPage() {
           updatedMessages[lastMsgIndex] = {
             ...lastMsg,
             isThinking: true,
+            isTyping: false,
             content: '',
           };
           return {
@@ -301,32 +372,12 @@ export default function ChatPage() {
       })
     );
 
-    setIsThinking(true);
+    setIsGenerating(true);
     const delayMs = getRandomThinkingDelay();
 
-    thinkingTimeoutRef.current = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       const newResponse = getRandomMemeResponse();
-      setSessions((prev) =>
-        prev.map((s) => {
-          if (s.id === effectiveActiveSessionId) {
-            const updatedMessages = [...s.messages];
-            updatedMessages[lastMsgIndex] = {
-              ...lastMsg,
-              isThinking: false,
-              content: newResponse,
-              timestamp: Date.now(),
-            };
-            return {
-              ...s,
-              messages: updatedMessages,
-              updatedAt: Date.now(),
-            };
-          }
-          return s;
-        })
-      );
-      setIsThinking(false);
-      thinkingTimeoutRef.current = null;
+      startTypingEffect(effectiveActiveSessionId, lastMsg.id, newResponse);
     }, delayMs);
   };
 
@@ -399,8 +450,8 @@ export default function ChatPage() {
           input={input}
           setInput={setInput}
           onSend={handleSendMessage}
-          isThinking={isThinking}
-          onStop={handleStopThinking}
+          isGenerating={isGenerating}
+          onStop={handleStopGenerating}
         />
       </div>
     </div>

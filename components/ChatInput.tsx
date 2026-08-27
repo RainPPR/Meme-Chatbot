@@ -7,7 +7,7 @@ interface ChatInputProps {
   input: string;
   setInput: (val: string) => void;
   onSend: (text: string) => void;
-  isThinking: boolean;
+  isGenerating: boolean;
   onStop: () => void;
 }
 
@@ -15,7 +15,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   input,
   setInput,
   onSend,
-  isThinking,
+  isGenerating,
   onStop,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -32,7 +32,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isThinking) return;
+    if (isGenerating) return;
     const trimmed = input.trim();
     if (!trimmed) return;
     onSend(trimmed);
@@ -70,12 +70,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           }}
           placeholder="向 AI 发送消息..."
           rows={1}
-          disabled={isThinking}
+          disabled={isGenerating}
           className="w-full resize-none bg-transparent outline-hidden text-sm sm:text-[15px] text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 py-1.5 px-2 max-h-[180px] leading-relaxed disabled:opacity-60"
         />
 
         <div className="flex items-center gap-1.5 shrink-0 mb-0.5">
-          {isThinking ? (
+          {isGenerating ? (
             <button
               id="btn-stop-generating"
               type="button"

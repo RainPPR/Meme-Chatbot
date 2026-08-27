@@ -19,6 +19,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   const isUser = message.role === 'user';
 
   const handleCopy = async () => {
+    if (!message.content) return;
     try {
       await navigator.clipboard.writeText(message.content);
       setCopied(true);
@@ -84,13 +85,16 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             </div>
           ) : (
             <div className="text-sm sm:text-[15px] leading-relaxed text-neutral-800 dark:text-neutral-200 break-words whitespace-pre-wrap selection:bg-neutral-200 dark:selection:bg-neutral-700">
-              {message.content}
+              <span>{message.content}</span>
+              {message.isTyping && (
+                <span className="inline-block w-2 h-4 ml-0.5 bg-neutral-800 dark:bg-neutral-200 align-middle animate-pulse" />
+              )}
             </div>
           )}
 
           {/* Action Bar */}
-          {!message.isThinking && (
-            <div className="flex items-center gap-2 pt-1">
+          {!message.isThinking && !message.isTyping && message.content && (
+            <div className="flex items-center gap-2 pt-1 animate-fade-in">
               <button
                 id={`btn-copy-${message.id}`}
                 onClick={handleCopy}

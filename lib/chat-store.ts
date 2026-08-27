@@ -4,6 +4,7 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   isThinking?: boolean;
+  isTyping?: boolean;
 }
 
 export interface ChatSession {
@@ -40,7 +41,15 @@ export function loadSessionsFromStorage(): ChatSession[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Clear any leftover in-flight thinking or typing flags on reload
+      return parsed.map((session: ChatSession) => ({
+        ...session,
+        messages: session.messages.map((m: ChatMessage) => ({
+          ...m,
+          isThinking: false,
+          isTyping: false,
+        })),
+      }));
     }
   } catch (err) {
     console.error('Failed to parse sessions from localStorage:', err);
@@ -51,7 +60,18 @@ export function loadSessionsFromStorage(): ChatSession[] {
 export function saveSessionsToStorage(sessions: ChatSession[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    // Strip temporary in-flight flags before serializing
+    const cleaned = sessions.map((s) => ({
+      ...s,
+      messages: s.messages
+        .filter((m) => !(m.isThinking && !m.content)) // don't persist empty thinking placeholders
+        .map((m) => ({
+          ...m,
+          isThinking: false,
+          isTyping: false,
+        })),
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
   } catch (err) {
     console.error('Failed to save sessions to localStorage:', err);
   }
@@ -78,7 +98,6 @@ export function loadThemePreference(): 'light' | 'dark' {
   try {
     const saved = localStorage.getItem(THEME_KEY);
     if (saved === 'dark' || saved === 'light') return saved;
-    // Default to light as required by guidelines
     return 'light';
   } catch {
     return 'light';
